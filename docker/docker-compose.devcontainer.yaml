@@ -11,32 +11,11 @@ services:
       - .:/home/switchmap-core/core
       - /home/switchmap-core/core/.venv
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgres://postgres:password@db:5432/switchmap
-      - API_URL=http://server:7000/graphql
-    depends_on:
-      db:
-        condition: service_healthy
+      - PYTHONUNBUFFERED=1
+      - POLLER_API_URL=http://poller:7000/send-data  # Core will receive SNMP data from Poller
     networks:
       - switchmap-network
-
-  db:
-    image: postgres:14
-    container_name: switchmap-db
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: switchmap
-    ports:
-      - "5432:5432"
-    networks:
-      - switchmap-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    command: ["python", "-m", "switchmap.core"]
 
 networks:
   switchmap-network:
