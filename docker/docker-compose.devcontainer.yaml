@@ -15,28 +15,9 @@ services:
       - DATABASE_URL=postgres://postgres:password@db:5432/switchmap
       - API_URL=http://server:7000/graphql
     depends_on:
-      db:
-        condition: service_healthy
     networks:
       - switchmap-network
 
-  db:
-    image: postgres:14
-    container_name: switchmap-db
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: switchmap
-    ports:
-      - "5432:5432"
-    networks:
-      - switchmap-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
 networks:
   switchmap-network:
