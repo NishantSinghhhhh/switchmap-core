@@ -1,21 +1,21 @@
 version: "3.8"
 
 services:
-  poller:
+  core:
     build:
       context: .
-      dockerfile: poller.containerfile
-    container_name: switchmap-poller
+      dockerfile: core.containerfile
+    container_name: switchmap-core
     user: "${API_UID}:${API_GID}"
     volumes:
-      - .:/home/switchmap-poller/poller
-      - /home/switchmap-poller/poller/.venv
+      - .:/home/switchmap-core/core
+      - /home/switchmap-core/core/.venv
     environment:
       - PYTHONUNBUFFERED=1
-      - CORE_API_URL=http://core:7000/process-data  # Poller will send SNMP data to Core
+      - POLLER_API_URL=http://poller:7000/send-data  # Core will receive SNMP data from Poller
     networks:
       - switchmap-network
-    command: ["python", "-m", "switchmap.poller"]
+    command: ["python", "-m", "switchmap.core"]
 
 networks:
   switchmap-network:
