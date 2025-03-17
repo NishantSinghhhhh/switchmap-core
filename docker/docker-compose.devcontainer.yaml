@@ -11,13 +11,32 @@ services:
       - .:/home/switchmap-core/core
       - /home/switchmap-core/core/.venv
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgres://postgres:password@db:5432/switchmap
-      - API_URL=http://server:7000/graphql
-    depends_on:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://server:7000/graphql  # Core sends data to Server via GraphQL
     networks:
       - switchmap-network
 
+  server:
+    build:
+      context: .
+      dockerfile: server.containerfile
+    container_name: switchmap-server
+    user: "${API_UID}:${API_GID}"
+    volumes:
+      - .:/home/switchmap-server/server
+      - /home/switchmap-server/server/node_modules
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgres://postgres:password@db:5432/switchmap
+    ports:
+      - "7000:7000"
+    networks:
+      - switchmap-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   switchmap-network:
