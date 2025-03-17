@@ -1,42 +1,21 @@
 version: "3.8"
 
 services:
-  core:
+  poller:
     build:
       context: .
-      dockerfile: core.containerfile
-    container_name: switchmap-core
+      dockerfile: poller.containerfile
+    container_name: switchmap-poller
     user: "${API_UID}:${API_GID}"
     volumes:
-      - .:/home/switchmap-core/core
-      - /home/switchmap-core/core/.venv
+      - .:/home/switchmap-poller/poller
+      - /home/switchmap-poller/poller/.venv
     environment:
       - PYTHONUNBUFFERED=1
-      - API_URL=http://server:7000/graphql  # Core sends data to Server via GraphQL
+      - CORE_API_URL=http://core:7000/process-data  # Poller will send SNMP data to Core
     networks:
       - switchmap-network
-
-  server:
-    build:
-      context: .
-      dockerfile: server.containerfile
-    container_name: switchmap-server
-    user: "${API_UID}:${API_GID}"
-    volumes:
-      - .:/home/switchmap-server/server
-      - /home/switchmap-server/server/node_modules
-    environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgres://postgres:password@db:5432/switchmap
-    ports:
-      - "7000:7000"
-    networks:
-      - switchmap-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:7000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+    command: ["python", "-m", "switchmap.poller"]
 
 networks:
   switchmap-network:
