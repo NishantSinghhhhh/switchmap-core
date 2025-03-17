@@ -1,0 +1,16 @@
+{
+    "name": "SwitchMap-Core Devcontainer",
+    "dockerComposeFile": "docker-compose.devcontainer.yaml",
+    "service": "core",
+    "workspaceFolder": "/home/switchmap-core/core",
+    "settings": {
+      "terminal.integrated.defaultProfile.linux": "bash"
+    },
+    "extensions": [
+      "ms-python.python",
+      "ms-azuretools.vscode-docker"
+    ],
+    "postCreateCommand": "pip install --no-cache-dir -r requirements.txt",
+    "remoteUser": "switchmap-core"
+  }
+  
