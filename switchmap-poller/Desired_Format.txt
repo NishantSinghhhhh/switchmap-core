@@ -1,1 +1,21 @@
-
+{
+  "nodes": [
+    {"id": "Device-1001"},
+    {"id": "Switch-B"},
+    {"id": "Switch-C"}
+  ],
+  "links": [
+    {
+      "source": "Device-1001",
+      "target": "Switch-B",
+      "localPort": "Gig0/1",
+      "remotePort": "Gig0/24"
+    },
+    {
+      "source": "Device-1001",
+      "target": "Switch-C",
+      "localPort": "Gig0/2",
+      "remotePort": "Gig0/12"
+    }
+  ]
+}
