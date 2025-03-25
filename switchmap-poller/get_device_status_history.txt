@@ -1,0 +1,47 @@
+from flask import request, jsonify
+from datetime import datetime, timedelta
+from switchmap.server.db.models import DeviceStatusHistory as DeviceStatusHistoryModel
+from switchmap.server.db.models import db_session
+
+@API_POST.route("/api/devices/<int:device_id>/status", methods=["GET"])
+def get_device_status_history(device_id):
+    """
+    Return device status history for a given device ID and number of days.
+
+    Query Params:
+        days (int): Number of past days to include
+
+    Returns:
+        JSON list of status history points
+    """
+    try:
+        days = int(request.args.get("days", 1))  # default to last 1 day
+        if days <= 0:
+            return jsonify({"error": "Days must be greater than 0"}), 400
+
+        start_time = datetime.utcnow() - timedelta(days=days)
+
+    except Exception as e:
+        return jsonify({"error": f"Invalid 'days' parameter: {str(e)}"}), 400
+
+    # Query status history
+    results = (
+        db_session.query(DeviceStatusHistoryModel)
+        .filter(
+            DeviceStatusHistoryModel.device_id == device_id,
+            DeviceStatusHistoryModel.timestamp >= start_time
+        )
+        .order_by(DeviceStatusHistoryModel.timestamp.asc())
+        .all()
+    )
+
+    # Build response
+    status_data = [
+        {
+            "timestamp": row.timestamp.isoformat(),
+            "is_up": row.is_up
+        }
+        for row in results
+    ]
+
+    return jsonify(status_data)
