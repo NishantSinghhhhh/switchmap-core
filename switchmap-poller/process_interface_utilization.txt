@@ -1,23 +1,50 @@
 from datetime import datetime
 from sqlalchemy.orm import Session
-from models import InterfaceUsageHistory, InterfaceTrafficHistory
+from models import InterfaceTrafficHistory
 from sqlalchemy import desc
+from utils import post  # Assuming your `post` function is available in utils
+import logging
 
-def process_interface_utilization(session: Session, interface_id: int, data: dict, timestamp: datetime):
+def process_interface_utilization_and_post(session: Session, interface_id: int, data: dict, timestamp: datetime, config):
     in_octets, out_octets, if_speed = data.get("in_octets"), data.get("out_octets"), data.get("if_speed")
     if None in (in_octets, out_octets, if_speed):
+        logging.warning(f"[Interface {interface_id}] Missing data, skipping utilization calc.")
         return
 
+    # Fetch last known traffic sample
     last = session.query(InterfaceTrafficHistory).filter_by(interface_id=interface_id).order_by(desc(InterfaceTrafficHistory.timestamp)).first()
 
     if last:
         delta_t = (timestamp - last.timestamp).total_seconds()
-        delta_in, delta_out = in_octets - last.in_bytes, out_octets - last.out_bytes
-        if delta_t > 0 and delta_in >= 0 and delta_out >= 0:
-            in_bps, out_bps = (delta_in * 8) / delta_t, (delta_out * 8) / delta_t
-            util_pct = max((in_bps / if_speed) * 100, (out_bps / if_speed) * 100)
-            session.add(InterfaceUsageHistory(interface_id=interface_id, timestamp=timestamp, in_bw=in_bps, out_bw=out_bps, utilization_pct=util_pct))
+        delta_in = in_octets - last.in_bytes
+        delta_out = out_octets - last.out_bytes
 
+        if delta_t > 0 and delta_in >= 0 and delta_out >= 0:
+            in_bps = (delta_in * 8) / delta_t
+            out_bps = (delta_out * 8) / delta_t
+            utilization_pct = max((in_bps / if_speed) * 100, (out_bps / if_speed) * 100)
+
+            payload = {
+                "interface_id": interface_id,
+                "timestamp": timestamp.isoformat(),
+                "in_bw": in_bps,
+                "out_bw": out_bps,
+                "utilization_pct": utilization_pct
+            }
+
+            # POSTING to server
+            response = post(f"interfaces/{interface_id}/usage", payload, config=config, server=True)
+
+            if not response.success:
+                logging.error(f"[Interface {interface_id}] Failed to post usage data.")
+            else:
+                logging.info(f"[Interface {interface_id}] Posted usage data successfully.")
+        else:
+            logging.info(f"[Interface {interface_id}] Skipping negative deltas or zero delta_t.")
+    else:
+        logging.info(f"[Interface {interface_id}] No previous traffic history found.")
+
+    # Store traffic snapshot for next delta calculation only
     session.add(InterfaceTrafficHistory(
         interface_id=interface_id,
         timestamp=timestamp,
