@@ -1,0 +1,42 @@
+from graphene import ObjectType, Field, List, ID, DateTime, Float, Schema
+from switchmap.server.db.models import InterfaceTrafficHistory as InterfaceTrafficHistoryModel
+from switchmap.server.db.models import db_session
+import graphene
+
+class InterfaceTrafficPoint(graphene.ObjectType):
+    timestamp = DateTime()
+    in_bps = Float()
+    out_bps = Float()
+    utilization_pct = Float()
+
+class Query(ObjectType):
+    interfaceTrafficHistory = List(
+        InterfaceTrafficPoint,
+        interfaceId=ID(required=True),
+        start=DateTime(required=True),
+        end=DateTime(required=True),
+    )
+
+    def resolve_interfaceTrafficHistory(self, info, interfaceId, start, end):
+        results = (
+            db_session.query(InterfaceTrafficHistoryModel)
+            .filter(
+                InterfaceTrafficHistoryModel.interface_id == interfaceId,
+                InterfaceTrafficHistoryModel.timestamp >= start,
+                InterfaceTrafficHistoryModel.timestamp <= end,
+            )
+            .order_by(InterfaceTrafficHistoryModel.timestamp.asc())
+            .all()
+        )
+
+        return [
+            InterfaceTrafficPoint(
+                timestamp=row.timestamp,
+                in_bps=row.in_bps,
+                out_bps=row.out_bps,
+                utilization_pct=row.utilization_pct,
+            )
+            for row in results
+        ]
+
+schema = Schema(query=Query)
