@@ -1,0 +1,13 @@
+from sqlalchemy import Column, Integer, DateTime, ForeignKey, Boolean
+from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime
+
+Base = declarative_base()
+
+class DeviceStatusHistory(Base):
+    __tablename__ = 'device_status_history'
+
+    id = Column(Integer, primary_key=True)
+    device_id = Column(Integer, ForeignKey('device.id'), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+    is_up = Column(Boolean, nullable=False)  # True = up, False = down
