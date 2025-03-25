@@ -1,0 +1,49 @@
+from flask import request, jsonify
+from sqlalchemy import and_
+from datetime import datetime, timedelta
+from switchmap.server.db.models import ArpHistory, db_session
+
+@API_POST.route("/api/arp/active", methods=["GET"])
+def get_active_arp_entries():
+    """
+    Return currently active arp_history entries for a given device_id.
+
+    Query Params:
+        device_id (str): The ID of the switch/router
+        max_age (optional, seconds): How recent the 'last_seen' should be
+
+    Returns:
+        JSON list of active ARP history entries
+    """
+    device_id = request.args.get("device_id")
+    if not device_id:
+        return jsonify({"error": "Missing device_id"}), 400
+
+    # Optionally restrict to recent entries
+    max_age = int(request.args.get("max_age", 600))  # default: 10 min
+    cutoff_time = datetime.utcnow() - timedelta(seconds=max_age)
+
+    entries = (
+        db_session.query(ArpHistory)
+        .filter(
+            and_(
+                ArpHistory.device_id == device_id,
+                ArpHistory.last_seen >= cutoff_time
+            )
+        )
+        .all()
+    )
+
+    result = [
+        {
+            "ip": e.ip,
+            "mac": e.mac,
+            "interface_id": e.interface_id,
+            "vlan_id": e.vlan_id,
+            "first_seen": e.first_seen.isoformat(),
+            "last_seen": e.last_seen.isoformat()
+        }
+        for e in entries
+    ]
+
+    return jsonify(result)
