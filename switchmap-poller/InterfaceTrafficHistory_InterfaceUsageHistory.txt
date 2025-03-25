@@ -1,0 +1,20 @@
+class InterfaceTrafficHistory(Base):
+    __tablename__ = 'interface_traffic_history'
+    id = Column(Integer, primary_key=True)
+    interface_id = Column(Integer, ForeignKey('interface.id'))
+    timestamp = Column(DateTime)
+    in_bytes = Column(BigInteger)
+    out_bytes = Column(BigInteger)
+    in_pkts = Column(BigInteger)
+    out_pkts = Column(BigInteger)
+    in_errors = Column(BigInteger)
+    out_errors = Column(BigInteger)
+
+class InterfaceUsageHistory(Base):
+    __tablename__ = 'interface_usage_history'
+    id = Column(Integer, primary_key=True)
+    interface_id = Column(Integer, ForeignKey('interface.id'))
+    timestamp = Column(DateTime)
+    in_bw = Column(Float)  # in bps
+    out_bw = Column(Float)  # in bps
+    utilization_pct = Column(Float)
