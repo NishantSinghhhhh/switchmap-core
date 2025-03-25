@@ -1,0 +1,70 @@
+from switchmap.server.db.models import InterfaceTrafficHistory, InterfaceUsageHistory, Interface, db_session
+from datetime import datetime
+import time
+
+# Cache last counters to compute deltas
+last_counters = {}  # {(interface_id): {"in_bytes": X, "out_bytes": Y, "timestamp": T}}
+
+def process_interface_traffic(device_data):
+    """
+    Extract, compute, and store bandwidth usage for each interface.
+
+    Args:
+        device_data (dict): JSON object from cpoller for one device
+    """
+    for if_index, iface in device_data.get("interfaces", {}).items():
+        try:
+            device_id = device_data["device_id"]
+            interface_id = resolve_interface_id(device_id, if_index)
+            if interface_id is None:
+                continue
+
+            in_bytes = iface.get("in_octets")
+            out_bytes = iface.get("out_octets")
+            timestamp = iface.get("timestamp", datetime.utcnow())
+            ifSpeed = iface.get("ifSpeed", None)  # in bits/sec
+
+            if in_bytes is None or out_bytes is None or ifSpeed is None:
+                continue
+
+            # Get last known counters from memory
+            last = last_counters.get(interface_id)
+            if last:
+                delta_time = (timestamp - last["timestamp"]).total_seconds()
+                delta_in = in_bytes - last["in_bytes"]
+                delta_out = out_bytes - last["out_bytes"]
+
+                if delta_time > 0:
+                    in_bps = (delta_in * 8) / delta_time
+                    out_bps = (delta_out * 8) / delta_time
+                    utilization_pct = round(max(in_bps, out_bps) / ifSpeed * 100, 2)
+
+                    db_session.add(InterfaceUsageHistory(
+                        interface_id=interface_id,
+                        timestamp=timestamp,
+                        in_bps=in_bps,
+                        out_bps=out_bps,
+                        utilization_pct=utilization_pct
+                    ))
+
+            # Update cache
+            last_counters[interface_id] = {
+                "in_bytes": in_bytes,
+                "out_bytes": out_bytes,
+                "timestamp": timestamp
+            }
+
+        except Exception as e:
+            print(f"[InterfaceTraffic ERROR] interface {if_index}: {e}")
+
+    db_session.commit()
+
+
+def resolve_interface_id(device_id, if_index):
+    from switchmap.server.db.models import Interface
+    interface = (
+        db_session.query(Interface)
+        .filter_by(device_id=device_id, snmp_index=if_index)
+        .first()
+    )
+    return interface.id if interface else None
