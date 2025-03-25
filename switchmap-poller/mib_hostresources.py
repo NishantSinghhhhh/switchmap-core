@@ -14,3 +14,12 @@ if stats is not None:
     DeviceStatsTable.insert(device_id=device.id, 
                             timestamp=ingest_time, 
                             cpu_usage_percent=stats)
+
+CREATE TABLE device_stats (
+    id SERIAL PRIMARY KEY,
+    device_id INTEGER NOT NULL REFERENCES device(id),  -- FK to the device table
+    timestamp TIMESTAMPTZ NOT NULL,                   -- Time of the CPU reading
+    cpu_usage_percent REAL,                           -- Average CPU usage across cores (0–100%)
+    mem_used_bytes BIGINT,                            -- Optional: used memory (bytes)
+    mem_total_bytes BIGINT                            -- Optional: total memory (bytes)
+);
