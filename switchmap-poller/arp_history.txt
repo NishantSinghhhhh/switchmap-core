@@ -1,0 +1,16 @@
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+
+Base = declarative_base()
+
+class ArpHistory(Base):
+    __tablename__ = 'arp_history'
+
+    id = Column(Integer, primary_key=True)
+    device_id = Column(String, nullable=False)         # Which router/switch saw this
+    ip = Column(String, nullable=False)                # IP address
+    mac = Column(String, nullable=False)               # MAC address
+    interface_id = Column(String, nullable=False)      # Port where MAC was seen
+    vlan_id = Column(Integer, nullable=True)           # Optional VLAN
+    first_seen = Column(DateTime, nullable=False)      # When entry was first seen
+    last_seen = Column(DateTime, nullable=False)       # Last time it was seen
