@@ -1,42 +1,55 @@
-from graphene import ObjectType, Field, List, ID, DateTime, Float, Schema
-from switchmap.server.db.models import InterfaceTrafficHistory as InterfaceTrafficHistoryModel
-from switchmap.server.db.models import db_session
-import graphene
+from flask import request, jsonify
+from switchmap.server.db.models import InterfaceUsageHistory as InterfaceUsageHistoryModel
+from switchmap.server.db.models import db_session  # Your DB session
+from sqlalchemy import and_
 
-class InterfaceTrafficPoint(graphene.ObjectType):
-    timestamp = DateTime()
-    in_bps = Float()
-    out_bps = Float()
-    utilization_pct = Float()
+@API_POST.route("/api/interfaces/<int:interface_id>/usage", methods=["GET"])
+def get_interface_usage(interface_id):
+    """
+    Return interface usage history for a given interface ID.
 
-class Query(ObjectType):
-    interfaceTrafficHistory = List(
-        InterfaceTrafficPoint,
-        interfaceId=ID(required=True),
-        start=DateTime(required=True),
-        end=DateTime(required=True),
+    Query Params:
+        start (ISO format): Start timestamp
+        end (ISO format): End timestamp
+
+    Returns:
+        JSON list of usage points
+    """
+    # Parse query parameters
+    try:
+        start = request.args.get("start")
+        end = request.args.get("end")
+        if not start or not end:
+            return jsonify({"error": "Missing 'start' or 'end' query parameters"}), 400
+
+        from datetime import datetime
+        start_dt = datetime.fromisoformat(start)
+        end_dt = datetime.fromisoformat(end)
+
+    except Exception as e:
+        return jsonify({"error": f"Invalid datetime format: {str(e)}"}), 400
+
+    # Query usage data
+    results = (
+        db_session.query(InterfaceUsageHistoryModel)
+        .filter(
+            InterfaceUsageHistoryModel.interface_id == interface_id,
+            InterfaceUsageHistoryModel.timestamp >= start_dt,
+            InterfaceUsageHistoryModel.timestamp <= end_dt,
+        )
+        .order_by(InterfaceUsageHistoryModel.timestamp.asc())
+        .all()
     )
 
-    def resolve_interfaceTrafficHistory(self, info, interfaceId, start, end):
-        results = (
-            db_session.query(InterfaceTrafficHistoryModel)
-            .filter(
-                InterfaceTrafficHistoryModel.interface_id == interfaceId,
-                InterfaceTrafficHistoryModel.timestamp >= start,
-                InterfaceTrafficHistoryModel.timestamp <= end,
-            )
-            .order_by(InterfaceTrafficHistoryModel.timestamp.asc())
-            .all()
-        )
+    # Build response
+    usage_data = [
+        {
+            "timestamp": row.timestamp.isoformat(),
+            "in_bw": row.in_bw,
+            "out_bw": row.out_bw,
+            "utilization_pct": row.utilization_pct,
+        }
+        for row in results
+    ]
 
-        return [
-            InterfaceTrafficPoint(
-                timestamp=row.timestamp,
-                in_bps=row.in_bps,
-                out_bps=row.out_bps,
-                utilization_pct=row.utilization_pct,
-            )
-            for row in results
-        ]
-
-schema = Schema(query=Query)
+    return jsonify(usage_data)
