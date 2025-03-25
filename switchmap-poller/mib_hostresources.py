@@ -7,3 +7,10 @@ class HostResourcesQuery(Query):
         if loads:
             return sum(loads) / len(loads)  # average CPU %
         return None
+
+# Pseudocode in core/ingest pipeline
+stats = data.get('cpu')  # from parsed YAML
+if stats is not None:
+    DeviceStatsTable.insert(device_id=device.id, 
+                            timestamp=ingest_time, 
+                            cpu_usage_percent=stats)
