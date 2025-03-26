@@ -1,0 +1,44 @@
+#Example GraphQL Query & Response
+query {
+  device(name: "SW1") {
+    interfaces {
+      name
+      status
+      inErrors
+      outErrors
+      inDiscards
+      outDiscards
+      history(limit: 2) {
+        timestamp
+        inOctets
+        outOctets
+      }
+    }
+  }
+}
+
+
+#Response
+{
+  "data": {
+    "device": {
+      "interfaces": [
+        {
+          "name": "Eth0/1",
+          "status": "up",
+          "inErrors": 5,
+          "outErrors": 1,
+          "inDiscards": 2,
+          "outDiscards": 0,
+          "history": [
+            { "timestamp": "2025-03-26T01:55:00Z", "inOctets": 1234500000, "outOctets": 2345600000 },
+            { "timestamp": "2025-03-26T02:00:00Z", "inOctets": 1234567890, "outOctets": 2345678901 }
+          ]
+        },
+        { "name": "Eth0/2", "status": "down", "inErrors": 0, ... history: [...] },
+        ...
+      ]
+    }
+  }
+}
+
