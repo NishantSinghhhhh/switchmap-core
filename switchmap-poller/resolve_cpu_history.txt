@@ -1,0 +1,5 @@
+def resolve_cpu_history(device, info, limit=100):
+    records = DeviceStats.query.filter_by(device_id=device.id) \
+                               .order_by(DeviceStats.timestamp.desc()) \
+                               .limit(limit)
+    return [CPUPointType(timestamp=r.timestamp, usage=r.cpu_usage_percent) for r in records]
