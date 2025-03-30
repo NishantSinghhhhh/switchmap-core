@@ -1,7 +1,7 @@
 # docs/conf.py
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../switchmap'))  # Adjust to your module path
+sys.path.insert(0, os.path.abspath('../switchmap'))  
 
 project = 'Switchmap-NG'
 extensions = [
@@ -10,5 +10,5 @@ extensions = [
     'sphinx.ext.viewcode',   # Add links to source code
 ]
 
-# Optionally, specify a theme
+
 html_theme = 'alabaster'
