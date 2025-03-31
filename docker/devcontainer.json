@@ -1,16 +1,19 @@
 {
-    "name": "SwitchMap-Core Devcontainer",
-    "dockerComposeFile": "docker-compose.devcontainer.yaml",
-    "service": "core",
-    "workspaceFolder": "/home/switchmap-core/core",
-    "settings": {
-      "terminal.integrated.defaultProfile.linux": "bash"
-    },
-    "extensions": [
-      "ms-python.python",
-      "ms-azuretools.vscode-docker"
-    ],
-    "postCreateCommand": "pip install --no-cache-dir -r requirements.txt",
-    "remoteUser": "switchmap-core"
-  }
-  
+  "name": "Switchmap-NG DevContainer",
+  "dockerComposeFile": "docker-compose.yaml",
+  "service": "dev", 
+  "workspaceFolder": "/workspace",
+  "settings": { 
+    "terminal.integrated.defaultProfile.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-azuretools.vscode-docker"
+  ],
+  "forwardPorts": [7000, 7001, 3000],
+  "postCreateCommand": ".devcontainer/setup-container.sh",
+  "remoteUser": "vscode"
+}
