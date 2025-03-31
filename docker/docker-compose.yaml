@@ -1,0 +1,38 @@
+version: "3.8"
+services:
+  dev:
+    build:
+      context: ..  # project root context
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspace:cached
+    environment:
+      # Env vars for Switchmap config (if needed)
+      SWITCHMAP_DB_HOST: db
+      SWITCHMAP_DB_NAME: switchmap
+      SWITCHMAP_DB_USER: switchmap
+      SWITCHMAP_DB_PASS: switchmap
+    networks:
+      - switchmap-net
+    depends_on:
+      - db
+    # The devcontainer will attach to this service
+
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: switchmap
+      POSTGRES_PASSWORD: switchmap
+      POSTGRES_DB: switchmap
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - switchmap-net
+
+networks:
+  switchmap-net:
+    driver: bridge
+
+volumes:
+  db-data: {}
