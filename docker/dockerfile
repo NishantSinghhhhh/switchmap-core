@@ -1,0 +1,36 @@
+# I start with a base image that includes Python 3 and essential system packages
+FROM python:3.11-bullseye
+
+# I set the environment variable to avoid prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# I update the package list and install the required OS packages:
+# build tools, SNMP, Postgres client, and curl for Node.js
+RUN apt-get update && apt-get install -y \
+    build-essential gcc make \
+    snmp libsnmp-dev snmp-mibs-downloader \
+    postgresql-client libpq-dev \
+    curl git && \
+    rm -rf /var/lib/apt/lists/*
+
+# I install Node.js (LTS version) by using the NodeSource setup script/
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && \
+    apt-get install -y nodejs && \
+    npm install -g npm@latest
+
+# I create a non-root user for development purposes
+RUN groupadd -g 1000 vscode && useradd -m -s /bin/bash -u 1000 -g vscode vscode
+
+# I set the working directory to /workspace and adjust its ownership
+WORKDIR /workspace
+RUN chown -R vscode:vscode /workspace
+
+# I copy the requirements file to a temporary location and install Python dependencies
+COPY requirements.txt /tmp/pip-tmp/
+RUN pip install -r /tmp/pip-tmp/requirements.txt && \
+    pip install psycopg2-binary
+
+# I switch to the non-root user for running further commands
+USER vscode
+
+# (Note: I will volume-mount the source code into /workspace via the devcontainer configuration)
