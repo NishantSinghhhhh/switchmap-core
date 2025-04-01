@@ -1,16 +1,24 @@
-import graphene
+import os
+import log  
+import files  
+import update_topology 
 
+# This function takes raw interface data and converts it into a topology dictionary.
 def generate_topology_data(interface_data):
     nodes = set()
     links = []
 
     for entry in interface_data:
+        # I create a unique identifier for the local device based on its index
         local_device = f"Device-{entry['idx_device']}"
+        # The remote device is identified by its system name in the LLDP data
         remote_device = entry['lldpRemSysName']
 
         nodes.add(local_device)
         nodes.add(remote_device)
 
+        # I build a link representing the connection between the local and remote devices,
+        # including the relevant port details.
         links.append({
             'source': local_device,
             'target': remote_device,
@@ -18,6 +26,7 @@ def generate_topology_data(interface_data):
             'remotePort': entry['lldpRemPortDesc']
         })
 
+    # I compile the topology information into a dictionary with nodes and links.
     topology_data = {
         'nodes': [{'id': device} for device in nodes],
         'links': links
@@ -25,34 +34,32 @@ def generate_topology_data(interface_data):
 
     return topology_data
 
+# This function ingests a single file to update the network topology.
+def ingest_topology_data(argument):
+    """
+    Ingest a single file for network topology updates.
 
-class Query(graphene.ObjectType):
-    network_topology = graphene.JSONString()
+    Args:
+        argument: An object containing the file path, configuration details, etc.
 
-    def resolve_network_topology(parent, info):
-        # Simulate fetching raw data (in real life, this comes from your DB)
-        interface_data = [
-            {
-                'idx_device': 1001,
-                'ifname': 'Gig0/1',
-                'lldpRemSysName': 'Switch-B',
-                'lldpRemPortDesc': 'Gig0/24'
-            },
-            {
-                'idx_device': 1001,
-                'ifname': 'Gig0/2',
-                'lldpRemSysName': 'Switch-C',
-                'lldpRemPortDesc': 'Gig0/12'
-            },
-            {
-                'idx_device': 1002,
-                'ifname': 'Gig1/1',
-                'lldpRemSysName': 'Switch-D',
-                'lldpRemPortDesc': 'Gig1/24'
-            }
-        ]
+    Returns:
+        None
+    """
+    # I extract the necessary parameters from the argument object.
+    (idx_zone, data, filepath, config, dns) = _get_arguments(argument)
 
-        topology = generate_topology_data(interface_data)
-        return topology
+    # I check for the presence of a skip file. If it exists, I log a message and abort the ingestion.
+    skip_file = files.skip_file(AGENT_INGESTER, config)
+    if os.path.isfile(skip_file):
+        log_message = (
+            f"Skip file {skip_file} found. Aborting ingesting {filepath}. "
+            "A daemon shutdown request was probably issued."
+        )
+        log.log2debug(1049, log_message)
+        return
 
-schema = graphene.Schema(query=Query)
+    # I convert the raw interface data into a structured topology format.
+    topology = generate_topology_data(data)
+
+    # Finally, I update the database with the new topology data.
+    update_topology.process(topology, idx_zone, dns=dns)
